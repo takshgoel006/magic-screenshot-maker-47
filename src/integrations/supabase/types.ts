@@ -14,7 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      predictions: {
+        Row: {
+          actual_views: number | null
+          average_views: number
+          category: string
+          comments: number
+          confidence: number
+          created_at: string
+          duration: number
+          feature_importance: Json
+          id: string
+          likes: number
+          lower_range: number
+          predicted_views: number
+          subscribers: number
+          tags: string
+          title: string
+          upload_day: string
+          upload_time: string
+          upper_range: number
+          user_id: string
+        }
+        Insert: {
+          actual_views?: number | null
+          average_views: number
+          category: string
+          comments?: number
+          confidence?: number
+          created_at?: string
+          duration: number
+          feature_importance?: Json
+          id?: string
+          likes?: number
+          lower_range: number
+          predicted_views: number
+          subscribers: number
+          tags?: string
+          title: string
+          upload_day: string
+          upload_time: string
+          upper_range: number
+          user_id: string
+        }
+        Update: {
+          actual_views?: number | null
+          average_views?: number
+          category?: string
+          comments?: number
+          confidence?: number
+          created_at?: string
+          duration?: number
+          feature_importance?: Json
+          id?: string
+          likes?: number
+          lower_range?: number
+          predicted_views?: number
+          subscribers?: number
+          tags?: string
+          title?: string
+          upload_day?: string
+          upload_time?: string
+          upper_range?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          default_category: string
+          full_name: string
+          id: string
+          notifications_enabled: boolean
+          theme_preference: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_category?: string
+          full_name?: string
+          id: string
+          notifications_enabled?: boolean
+          theme_preference?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_category?: string
+          full_name?: string
+          id?: string
+          notifications_enabled?: boolean
+          theme_preference?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
