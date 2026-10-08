@@ -163,7 +163,7 @@ function PredictPage() {
   );
 }
 
-function Field({ label, error, id, children }: { label: string; error?: string; id: string; children: React.ReactNode }) {
+function Field({ label, error, id, children }: { label: string; error: string | undefined; id: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
