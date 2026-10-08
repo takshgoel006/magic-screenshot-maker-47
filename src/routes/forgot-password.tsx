@@ -23,12 +23,15 @@ export const Route = createFileRoute("/forgot-password")({
 function Page() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
-  async function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${window.location.origin}/reset-password`,
     });
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setSent(true);
   }
   return (
