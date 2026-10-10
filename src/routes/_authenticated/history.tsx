@@ -10,11 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deletePrediction, listPredictions } from "@/lib/predictions.functions";
+import { deletePrediction, listPredictions, updateActualViews } from "@/lib/predictions.functions";
 import { accuracyOf, filterByRange, predictionsKey } from "@/lib/queries";
 import { CATEGORIES, DATE_RANGES, formatCompact } from "@/lib/constants";
 
@@ -36,12 +38,15 @@ function HistoryPage() {
   const qc = useQueryClient();
   const fetchList = useServerFn(listPredictions);
   const del = useServerFn(deletePrediction);
+  const saveActual = useServerFn(updateActualViews);
   const { data, isLoading } = useQuery({ queryKey: predictionsKey, queryFn: () => fetchList() });
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
   const [range, setRange] = useState("all");
   const [page, setPage] = useState(1);
   const [toDelete, setToDelete] = useState<string | null>(null);
+  const [editingActual, setEditingActual] = useState<string | null>(null);
+  const [actualValue, setActualValue] = useState("");
 
   const rows = useMemo(() => {
     let r = filterByRange(data ?? [], range);
@@ -62,6 +67,23 @@ function HistoryPage() {
       toast.error("Couldn't delete this prediction.");
     }
     setToDelete(null);
+  }
+
+  async function confirmActual() {
+    if (!editingActual || actualValue.trim() === "") return;
+    const actual = Number(actualValue);
+    if (!Number.isSafeInteger(actual) || actual < 0) {
+      toast.error("Enter a whole number of views.");
+      return;
+    }
+    try {
+      await saveActual({ data: { id: editingActual, actual_views: actual } });
+      await qc.invalidateQueries({ queryKey: predictionsKey });
+      toast.success("Actual views saved");
+      setEditingActual(null);
+    } catch {
+      toast.error("Couldn't save actual views.");
+    }
   }
 
   return (
@@ -104,7 +126,18 @@ function HistoryPage() {
                       <td className="max-w-[220px] truncate px-3 py-3 font-medium">{r.title}</td>
                       <td className="px-3 py-3"><span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">{r.category}</span></td>
                       <td className="px-3 py-3 font-semibold">{formatCompact(r.predicted_views)}</td>
-                      <td className="px-3 py-3">{r.actual_views != null ? formatCompact(r.actual_views) : "—"}</td>
+                      <td className="px-3 py-3">
+                        <button
+                          className="text-left underline decoration-dotted underline-offset-4 hover:text-primary"
+                          onClick={() => {
+                            setEditingActual(r.id);
+                            setActualValue(r.actual_views == null ? "" : String(r.actual_views));
+                          }}
+                          aria-label={`Edit actual views for ${r.title}`}
+                        >
+                          {r.actual_views != null ? formatCompact(r.actual_views) : "Add actual"}
+                        </button>
+                      </td>
                       <td className="px-3 py-3">{acc != null ? `${acc}%` : <span className="text-muted-foreground">Pending</span>}</td>
                       <td className="px-3 py-3 text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</td>
                       <td className="px-3 py-3">
@@ -131,6 +164,23 @@ function HistoryPage() {
           </div>
         ) : null}
       </div>
+
+      <Dialog open={!!editingActual} onOpenChange={(open) => !open && setEditingActual(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record actual views</DialogTitle>
+            <DialogDescription>Save the current view count to compare it with this estimate.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="actual-views">Actual views</Label>
+            <Input id="actual-views" type="number" min={0} step={1} value={actualValue} onChange={(e) => setActualValue(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingActual(null)}>Cancel</Button>
+            <Button onClick={confirmActual}>Save views</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
