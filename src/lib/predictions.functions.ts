@@ -136,8 +136,7 @@ export const updateProfile = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("profiles")
-      .upsert({ id: context.userId, ...data })
-      .eq("id", context.userId);
+      .upsert({ id: context.userId, ...data });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
