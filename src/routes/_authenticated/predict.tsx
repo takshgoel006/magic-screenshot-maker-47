@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Loader2, Lightbulb, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createPrediction } from "@/lib/predictions.functions";
+import { createPrediction, getProfile } from "@/lib/predictions.functions";
 import { CATEGORIES, UPLOAD_DAYS } from "@/lib/constants";
 import { predictionsKey } from "@/lib/queries";
 
@@ -42,17 +43,20 @@ function PredictPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const create = useServerFn(createPrediction);
+  const fetchProfile = useServerFn(getProfile);
+  const { data: profileData } = useQuery({ queryKey: ["profile"], queryFn: () => fetchProfile() });
   const [form, setForm] = useState<Form>(initial);
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const category = form.category || profileData?.profile?.default_category || "";
 
   const set = (k: keyof Form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   function validate() {
     const e: Partial<Record<keyof Form, string>> = {};
     if (form.title.trim().length < 3) e.title = "Enter a title (min 3 characters)";
-    if (!form.category) e.category = "Choose a category";
+    if (!category) e.category = "Choose a category";
     if (!form.upload_day) e.upload_day = "Choose a day";
     if (!form.upload_time) e.upload_time = "Choose a time";
     (["duration", "subscribers", "average_views", "likes", "comments"] as const).forEach((k) => {
@@ -72,7 +76,7 @@ function PredictPage() {
     try {
       const { id } = await create({
         data: {
-          title: form.title, category: form.category, duration: Math.round(Number(form.duration)),
+          title: form.title, category, duration: Math.round(Number(form.duration)),
           tags: form.tags, upload_day: form.upload_day, upload_time: form.upload_time,
           subscribers: Math.round(Number(form.subscribers)), average_views: Math.round(Number(form.average_views)),
           likes: Math.round(Number(form.likes)), comments: Math.round(Number(form.comments)),
@@ -105,7 +109,7 @@ function PredictPage() {
           </Field>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Category" error={errors.category} id="category">
-              <Select value={form.category} onValueChange={(v) => set("category", v)}>
+              <Select value={category} onValueChange={(v) => set("category", v)}>
                 <SelectTrigger id="category"><SelectValue placeholder="Select category" /></SelectTrigger>
                 <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
@@ -163,7 +167,7 @@ function PredictPage() {
   );
 }
 
-function Field({ label, error, id, children }: { label: string; error: string | undefined; id: string; children: React.ReactNode }) {
+function Field({ label, error, id, children }: { label: string; error?: string | undefined; id: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>

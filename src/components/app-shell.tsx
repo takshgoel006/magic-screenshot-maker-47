@@ -1,6 +1,8 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard,
   Target,
@@ -22,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { getProfile } from "@/lib/predictions.functions";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -100,14 +103,17 @@ export function AppShell({
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
+  const [metadataName, setMetadataName] = useState("");
+  const fetchProfile = useServerFn(getProfile);
+  const { data: profileData } = useQuery({ queryKey: ["profile"], queryFn: () => fetchProfile() });
+  const name = profileData?.profile?.full_name || metadataName;
   const signOut = useSignOut();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setEmail(data.user?.email ?? "");
       const meta = data.user?.user_metadata as { full_name?: string } | undefined;
-      setName(meta?.full_name ?? "");
+      setMetadataName(meta?.full_name ?? "");
     });
   }, []);
 

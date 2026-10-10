@@ -95,6 +95,23 @@ export const deletePrediction = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const updateActualViews = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      actual_views: z.number().int().min(0).max(10_000_000_000),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("predictions")
+      .update({ actual_views: data.actual_views })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export type ProfileRow = {
   id: string;
   full_name: string;
@@ -136,8 +153,7 @@ export const updateProfile = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("profiles")
-      .upsert({ id: context.userId, ...data })
-      .eq("id", context.userId);
+      .upsert({ id: context.userId, ...data });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
