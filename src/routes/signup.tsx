@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 
 export const Route = createFileRoute("/signup")({
   ssr: false,
@@ -36,6 +37,7 @@ function SignupPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -65,6 +67,15 @@ function SignupPage() {
       return;
     }
     setSent(true);
+  }
+
+  async function handleGoogle(): Promise<void> {
+    setGoogleLoading(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    setGoogleLoading(false);
+    if (result.error) toast.error("Google sign-in failed. Please try again.");
   }
 
   const field = (id: keyof typeof form, label: string, type = "text", placeholder = "") => (
@@ -107,6 +118,13 @@ function SignupPage() {
                   Create Account
                 </Button>
               </form>
+              <div className="my-5 flex items-center gap-3 text-xs uppercase text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" />
+              </div>
+              <Button variant="outline" className="w-full" onClick={handleGoogle} disabled={googleLoading}>
+                {googleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Continue with Google
+              </Button>
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link to="/auth" className="font-medium text-primary hover:underline">Login</Link>
