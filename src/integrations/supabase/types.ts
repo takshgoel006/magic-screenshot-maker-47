@@ -19,6 +19,7 @@ export type Database = {
           actual_views: number | null
           average_views: number
           category: string
+          channel_id: string | null
           comments: number
           confidence: number
           created_at: string
@@ -31,6 +32,7 @@ export type Database = {
           subscribers: number
           tags: string
           title: string
+          upload_date: string | null
           upload_day: string
           upload_time: string
           upper_range: number
@@ -40,6 +42,7 @@ export type Database = {
           actual_views?: number | null
           average_views: number
           category: string
+          channel_id?: string | null
           comments?: number
           confidence?: number
           created_at?: string
@@ -52,6 +55,7 @@ export type Database = {
           subscribers: number
           tags?: string
           title: string
+          upload_date?: string | null
           upload_day: string
           upload_time: string
           upper_range: number
@@ -61,6 +65,7 @@ export type Database = {
           actual_views?: number | null
           average_views?: number
           category?: string
+          channel_id?: string | null
           comments?: number
           confidence?: number
           created_at?: string
@@ -73,6 +78,7 @@ export type Database = {
           subscribers?: number
           tags?: string
           title?: string
+          upload_date?: string | null
           upload_day?: string
           upload_time?: string
           upper_range?: number

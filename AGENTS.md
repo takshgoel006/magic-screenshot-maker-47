@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep the browser's prediction API request schema in a shared Zod module and persist only its validated response through the authenticated prediction server function, so untrusted API data is checked before it enters account history.
