@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createPrediction, getProfile } from "@/lib/predictions.functions";
 import { CATEGORIES, UPLOAD_DAYS } from "@/lib/constants";
 import { predictionsKey } from "@/lib/queries";
+import { predictionRequestSchema, predictionResponseSchema } from "@/lib/prediction-contract";
 
 export const Route = createFileRoute("/_authenticated/predict")({
   head: () => ({
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/predict")({
 });
 
 const initial = {
-  title: "", category: "", duration: "", tags: "", upload_day: "", upload_time: "",
+  channel_id: "", title: "", category: "", duration: "", tags: "", upload_date: "",
   subscribers: "", average_views: "", likes: "", comments: "",
 };
 type Form = typeof initial;
@@ -49,16 +50,20 @@ function PredictPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [failureMessage, setFailureMessage] = useState("");
   const category = form.category || profileData?.profile?.default_category || "";
 
   const set = (k: keyof Form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   function validate() {
     const e: Partial<Record<keyof Form, string>> = {};
+    if (!form.channel_id.trim()) e.channel_id = "Enter a channel ID";
     if (form.title.trim().length < 3) e.title = "Enter a title (min 3 characters)";
     if (!category) e.category = "Choose a category";
-    if (!form.upload_day) e.upload_day = "Choose a day";
-    if (!form.upload_time) e.upload_time = "Choose a time";
+    const selectedDate = new Date(form.upload_date);
+    if (!form.upload_date || !Number.isFinite(selectedDate.getTime())) {
+      e.upload_date = "Choose a valid upload date and time";
+    }
     (["duration", "subscribers", "average_views", "likes", "comments"] as const).forEach((k) => {
       const n = Number(form[k]);
       if (form[k] === "" || !Number.isFinite(n) || n < 0) e[k] = "Enter a valid number";
@@ -73,22 +78,64 @@ function PredictPage() {
     if (!validate()) return;
     setLoading(true);
     setFailed(false);
+    setFailureMessage("");
     try {
+      const uploadDate = new Date(form.upload_date);
+      const requestData = predictionRequestSchema.parse({
+        channelId: form.channel_id,
+        title: form.title,
+        uploadDate: uploadDate.toISOString(),
+      });
+      const response = await fetch("http://localhost:8080/api/v1/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestData),
+      });
+      if (!response.ok) {
+        throw new Error(`The prediction service returned ${response.status}.`);
+      }
+
+      let responseBody: unknown;
+      try {
+        responseBody = await response.json();
+      } catch {
+        throw new Error("The prediction service returned an invalid response.");
+      }
+      const parsedPrediction = predictionResponseSchema.safeParse(responseBody);
+      if (!parsedPrediction.success) {
+        throw new Error("The prediction service returned an invalid response.");
+      }
+
+      const uploadDay = uploadDate.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+      const uploadTime = uploadDate.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "UTC",
+      });
       const { id } = await create({
         data: {
-          title: form.title, category, duration: Math.round(Number(form.duration)),
-          tags: form.tags, upload_day: form.upload_day, upload_time: form.upload_time,
+          channel_id: requestData.channelId,
+          title: requestData.title,
+          category,
+          duration: Math.round(Number(form.duration)),
+          tags: form.tags,
+          upload_date: requestData.uploadDate,
+          upload_day: uploadDay,
+          upload_time: uploadTime,
           subscribers: Math.round(Number(form.subscribers)), average_views: Math.round(Number(form.average_views)),
           likes: Math.round(Number(form.likes)), comments: Math.round(Number(form.comments)),
+          prediction: parsedPrediction.data,
         },
       });
       await qc.invalidateQueries({ queryKey: predictionsKey });
       toast.success("Prediction ready");
       navigate({ to: "/result/$id", params: { id } });
     } catch (err) {
-      console.error(err);
       setFailed(true);
-      toast.error("We couldn't reach the prediction service.");
+      const message = err instanceof Error ? err.message : "Prediction failed. Please try again.";
+      setFailureMessage(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -104,8 +151,11 @@ function PredictPage() {
     <AppShell title="Predict Views" subtitle="Enter your video details to estimate its view count.">
       <div className="grid gap-6 lg:grid-cols-3">
         <form onSubmit={submit} className="card-surface space-y-5 p-6 lg:col-span-2">
+          <Field label="Channel ID" error={errors.channel_id} id="channel_id">
+            <Input id="channel_id" maxLength={128} placeholder="e.g. UCxxxxxxxxxxxxxxxxxxxxxx" value={form.channel_id} onChange={(e) => set("channel_id", e.target.value)} />
+          </Field>
           <Field label="Video Title" error={errors.title} id="title">
-            <Input id="title" placeholder="e.g. Learn Python in 10 Minutes" value={form.title} onChange={(e) => set("title", e.target.value)} />
+            <Input id="title" maxLength={150} placeholder="e.g. Learn Python in 10 Minutes" value={form.title} onChange={(e) => set("title", e.target.value)} />
           </Field>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Category" error={errors.category} id="category">
@@ -119,17 +169,9 @@ function PredictPage() {
           <Field label="Tags (comma separated)" id="tags">
             <Input id="tags" placeholder="python, tutorial, coding" value={form.tags} onChange={(e) => set("tags", e.target.value)} />
           </Field>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Upload Day" error={errors.upload_day} id="upload_day">
-              <Select value={form.upload_day} onValueChange={(v) => set("upload_day", v)}>
-                <SelectTrigger id="upload_day"><SelectValue placeholder="Select day" /></SelectTrigger>
-                <SelectContent>{UPLOAD_DAYS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-              </Select>
-            </Field>
-            <Field label="Upload Time" error={errors.upload_time} id="upload_time">
-              <Input id="upload_time" type="time" value={form.upload_time} onChange={(e) => set("upload_time", e.target.value)} />
-            </Field>
-          </div>
+          <Field label="Upload Date & Time" error={errors.upload_date} id="upload_date">
+            <Input id="upload_date" type="datetime-local" value={form.upload_date} onChange={(e) => set("upload_date", e.target.value)} />
+          </Field>
           <div className="grid gap-5 sm:grid-cols-2">
             {num("subscribers", "Channel Subscribers", "50000")}
             {num("average_views", "Average Views (past videos)", "12000")}
@@ -139,7 +181,7 @@ function PredictPage() {
 
           {failed ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-              <span className="text-destructive">The prediction service didn't respond. Your inputs are kept.</span>
+              <span className="text-destructive">{failureMessage || "The prediction service didn't respond. Your inputs are kept."}</span>
               <Button type="button" variant="outline" size="sm" onClick={() => submit()}>
                 <RefreshCw className="mr-1 h-4 w-4" /> Retry
               </Button>
