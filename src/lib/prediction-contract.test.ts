@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "node:test";
 import { predictionRequestSchema, predictionResponseSchema } from "./prediction-contract";
 
 describe("prediction request validation", () => {
