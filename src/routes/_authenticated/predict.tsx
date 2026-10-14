@@ -11,9 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createPrediction, getProfile } from "@/lib/predictions.functions";
-import { CATEGORIES, UPLOAD_DAYS } from "@/lib/constants";
+import { CATEGORIES } from "@/lib/constants";
 import { predictionsKey } from "@/lib/queries";
 import { predictionRequestSchema, predictionResponseSchema } from "@/lib/prediction-contract";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/predict")({
   head: () => ({
@@ -86,9 +87,17 @@ function PredictPage() {
         title: form.title,
         uploadDate: uploadDate.toISOString(),
       });
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (sessionError || !accessToken) {
+        throw new Error("Sign in again before requesting a prediction.");
+      }
       const response = await fetch("http://localhost:8080/api/v1/predict", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify(requestData),
       });
       if (!response.ok) {
@@ -152,10 +161,10 @@ function PredictPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <form onSubmit={submit} className="card-surface space-y-5 p-6 lg:col-span-2">
           <Field label="Channel ID" error={errors.channel_id} id="channel_id">
-            <Input id="channel_id" maxLength={128} placeholder="e.g. UCxxxxxxxxxxxxxxxxxxxxxx" value={form.channel_id} onChange={(e) => set("channel_id", e.target.value)} />
+            <Input id="channel_id" maxLength={128} required placeholder="e.g. UCxxxxxxxxxxxxxxxxxxxxxx" value={form.channel_id} onChange={(e) => set("channel_id", e.target.value)} />
           </Field>
           <Field label="Video Title" error={errors.title} id="title">
-            <Input id="title" maxLength={150} placeholder="e.g. Learn Python in 10 Minutes" value={form.title} onChange={(e) => set("title", e.target.value)} />
+            <Input id="title" minLength={3} maxLength={150} required placeholder="e.g. Learn Python in 10 Minutes" value={form.title} onChange={(e) => set("title", e.target.value)} />
           </Field>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Category" error={errors.category} id="category">
@@ -170,7 +179,7 @@ function PredictPage() {
             <Input id="tags" placeholder="python, tutorial, coding" value={form.tags} onChange={(e) => set("tags", e.target.value)} />
           </Field>
           <Field label="Upload Date & Time" error={errors.upload_date} id="upload_date">
-            <Input id="upload_date" type="datetime-local" value={form.upload_date} onChange={(e) => set("upload_date", e.target.value)} />
+            <Input id="upload_date" type="datetime-local" required value={form.upload_date} onChange={(e) => set("upload_date", e.target.value)} />
           </Field>
           <div className="grid gap-5 sm:grid-cols-2">
             {num("subscribers", "Channel Subscribers", "50000")}
