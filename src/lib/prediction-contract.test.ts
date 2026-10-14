@@ -1,4 +1,5 @@
 import { describe, expect, test } from "node:test";
+import assert from "node:assert/strict";
 import { predictionRequestSchema, predictionResponseSchema } from "./prediction-contract";
 
 describe("prediction request validation", () => {
