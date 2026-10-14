@@ -41,6 +41,7 @@ const predictionInputSchema = z.object({
   average_views: z.number().int().min(0).max(10_000_000_000),
   likes: z.number().int().min(0).max(10_000_000_000),
   comments: z.number().int().min(0).max(10_000_000_000),
+  prediction: predictionResponseSchema,
 });
 
 export const createPrediction = createServerFn({ method: "POST" })
@@ -52,24 +53,7 @@ export const createPrediction = createServerFn({ method: "POST" })
       title: data.title,
       uploadDate: data.upload_date,
     });
-
-    let result;
-    const endpoint = "http://localhost:8080/api/v1/predict";
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestData),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Prediction API returned ${response.status}.`);
-      }
-
-      result = predictionResponseSchema.parse(await response.json());
-    } catch {
-      throw new Error("Prediction API request failed. Please try again.");
-    }
+    const result = predictionResponseSchema.parse(data.prediction);
 
     const fallback = mockPredict(data);
     const uploadDate = new Date(data.upload_date);

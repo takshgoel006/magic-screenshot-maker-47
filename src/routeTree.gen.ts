@@ -21,6 +21,7 @@ import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedPredictRouteImport } from './routes/_authenticated/predict'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedResultIdRouteImport } from './routes/_authenticated/result.$id'
+import { Route as ApiV1PredictRouteImport } from './routes/api/v1/predict'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -81,6 +82,11 @@ const AuthenticatedResultIdRoute = AuthenticatedResultIdRouteImport.update({
   path: '/result/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiV1PredictRoute = ApiV1PredictRouteImport.update({
+  id: '/api/v1/predict',
+  path: '/api/v1/predict',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/predict': typeof AuthenticatedPredictRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/result/$id': typeof AuthenticatedResultIdRoute
+  '/api/v1/predict': typeof ApiV1PredictRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/predict': typeof AuthenticatedPredictRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/result/$id': typeof AuthenticatedResultIdRoute
+  '/api/v1/predict': typeof ApiV1PredictRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/_authenticated/predict': typeof AuthenticatedPredictRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/result/$id': typeof AuthenticatedResultIdRoute
+  '/api/v1/predict': typeof ApiV1PredictRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/predict'
     | '/profile'
     | '/result/$id'
+    | '/api/v1/predict'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/predict'
     | '/profile'
     | '/result/$id'
+    | '/api/v1/predict'
   id:
     | '__root__'
     | '/'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/_authenticated/predict'
     | '/_authenticated/profile'
     | '/_authenticated/result/$id'
+    | '/api/v1/predict'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -173,6 +185,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  ApiV1PredictRoute: typeof ApiV1PredictRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -261,6 +274,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedResultIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/v1/predict': {
+      id: '/api/v1/predict'
+      path: '/api/v1/predict'
+      fullPath: '/api/v1/predict'
+      preLoaderRoute: typeof ApiV1PredictRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -292,6 +312,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  ApiV1PredictRoute: ApiV1PredictRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
